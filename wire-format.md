@@ -95,14 +95,20 @@ The inbox parser is deliberately tolerant of hand-written / legacy bodies:
 - **Line endings are normalized**: the parser converts `\r\n` and lone `\r` to
   `\n` before parsing, so CRLF bodies (e.g. issues authored in the GitHub web UI)
   parse identically to LF bodies.
+- **Per-line whitespace**: each line is trimmed of leading/trailing whitespace
+  AND line-terminator characters (space, tab, VT, FF, LF, CR, LS, PS) before
+  marker/field matching, so a stray control character can't hide a marker.
 - `**bold**` markers around labels are ignored.
 - A `**Contact Email:** foo@bar.com` inline form is accepted, as is the
   label-on-its-own-line-then-value form.
 - Standalone `---` lines are stripped from the description.
 - Attachment `<size>` is parsed approximately (`B`/`KB`/`MB`/`GB`, 1000-based)
-  into a **64-bit** integer (sizes can exceed 2 GB); a missing size yields a
-  null size. A **missing OR empty** MIME field falls back to extension inference
-  (so `… — , 4 KB` and `… —` both infer the type from the URL).
+  into a **64-bit** integer; a missing size yields a null size. A size token that
+  is **non-finite** (`Infinity`/`NaN`) or whose value **exceeds 100 TB**
+  (10^14 bytes) yields a **null** size — implementations MUST reject rather than
+  trap, saturate, or wrap. A **missing OR empty** MIME field falls back to
+  extension inference (so `… — , 4 KB` and `… —` both infer from the URL);
+  extension inference **strips any `?query`/`#fragment`** from the URL first.
 - Unknown future marker versions (e.g. `attachments-v2`) are ignored.
 
 ## Conformance
