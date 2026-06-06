@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate golden fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # These JSON fixtures are the canonical source of truth that every SDK's
+      # conformance suite is generated/checked against — make sure they parse.
+      - name: Validate fixture JSON
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(fixtures/*.json)
+          if [ ${#files[@]} -eq 0 ]; then echo "No fixtures found!"; exit 1; fi
+          for f in "${files[@]}"; do
+            echo "Validating $f"
+            jq empty "$f"
+          done
+          echo "All ${#files[@]} fixture file(s) are valid JSON."

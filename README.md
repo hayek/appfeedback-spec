@@ -1,6 +1,6 @@
 # appfeedback-spec
 
-The cross-platform contract for the AppFeedback SDK family (Apple · Android · Web).
+The cross-platform contract for the [AppFeedback SDK family](https://hayek.github.io/appfeedback-docs/) (Apple · Android · Web).
 
 Every SDK is a write-only client that creates a GitHub issue in a byte-exact
 body format which the AppFeedback inbox parses back. This repo is the single
@@ -20,10 +20,15 @@ Each platform SDK vendors these fixtures into its test target and runs them as a
 **blocking CI gate**. Any change to the wire format MUST add or update a fixture
 here first. The Swift SDK at `../AppFeedbackSDK` is the reference implementation.
 
-Run `scripts/sync-to-swift.sh` after editing `fixtures/` to copy them into the
-Swift SDK's test resources.
+After editing `fixtures/`, run the sync scripts to copy them into each SDK's test
+resources: `scripts/sync-to-swift.sh`, `scripts/sync-to-android.sh`,
+`scripts/sync-to-web.sh`.
 
 ## Versioning
 
 The spec is versioned independently of the SDKs. Breaking changes to the wire
 format bump the spec's MAJOR version and require a coordinated SDK + inbox update.
+
+## License
+
+MIT © Amir Hayek. See [LICENSE](./LICENSE).
