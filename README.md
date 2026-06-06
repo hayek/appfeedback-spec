@@ -1,5 +1,7 @@
 # appfeedback-spec
 
+[![CI](https://github.com/hayek/appfeedback-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/hayek/appfeedback-spec/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 The cross-platform contract for the [AppFeedback SDK family](https://hayek.github.io/appfeedback-docs/) (Apple · Android · Web).
 
 Every SDK is a write-only client that creates a GitHub issue in a byte-exact
