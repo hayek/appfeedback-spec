@@ -1,0 +1,37 @@
+name: Bug report
+description: Report an error, ambiguity, or inconsistency in the AppFeedback wire-format spec or fixtures.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please search existing issues
+        first, then fill in as much detail as you can — pointing at the specific
+        spec section or fixture is the single most useful thing you can give us.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: The error or ambiguity, including what the spec/fixture says vs. what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Which fixture or spec section, and how the mismatch surfaces (e.g. which SDK disagrees).
+      placeholder: |
+        1. Fixture `fixtures/...json`
+        2. Swift decodes X, Web decodes Y
+        3. Spec section ... is silent on ...
+  - type: input
+    id: version
+    attributes:
+      label: Spec version / commit
+      description: The spec version or commit you're referencing.
+      placeholder: "appfeedback-spec main @abc1234"
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Which SDK(s) and versions exposed the issue, and any other relevant context.

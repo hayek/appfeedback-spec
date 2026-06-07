@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a change or addition to the AppFeedback wire-format spec.
+labels: [feature-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Spec changes ripple across every SDK, so
+        please describe the problem you're trying to solve before the solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What does the current wire format make hard or impossible?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: The proposed format change, and how it affects existing fixtures.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other approaches you considered, and why they fall short.
