@@ -111,8 +111,27 @@ The inbox parser is deliberately tolerant of hand-written / legacy bodies:
 - A `**Contact Email:** foo@bar.com` inline form is accepted, as is the
   label-on-its-own-line-then-value form.
 - Standalone `---` lines are stripped from the description.
+- **Attachment URL**: the parser captures the `<url>` substring between `](` and
+  the next `)`. Attachment URLs are **assumed to be valid absolute URLs** — real
+  GitHub attachment URLs always are — and the MIME-from-extension inference (below)
+  operates on that raw substring. Each platform MAY use its idiomatic URL
+  representation (Swift `URL`, Kotlin/TS `String`); a platform that stores a strict
+  URL type MAY skip a malformed url (one its `URL`/`URI` parser rejects). The byte
+  count and field values that the conformance fixtures pin all use well-formed URLs;
+  behavior on malformed URLs is intentionally **out of scope** (not a divergence).
 - Attachment `<size>` is parsed approximately (`B`/`KB`/`MB`/`GB`, 1000-based)
   into a **64-bit** integer; a missing size yields a null size.
+  - **Magnitude / unit split (canonical)**: the size token is split on its
+    **first** ASCII space (U+0020): the **magnitude** is the substring **before**
+    that first space (the whole token when there is no space), and the **unit** is
+    **everything after** it with the canonical ASCII whitespace set trimmed from
+    **both ends** (so interior or repeated spaces collapse away — `4000  KB` with
+    two spaces parses identically to `4000 KB`, i.e. magnitude `4000`, unit `KB`).
+    The unit is then upper-cased and matched against `KB`/`MB`/`GB` (anything else,
+    including the empty string, is treated as bytes). Implementations MUST NOT use a
+    bounded native split that keeps the separator/leading space in the unit field
+    (Swift `split(maxSplits:)`, Kotlin `split(limit=)`) without re-trimming, because
+    that leaves a leading space on the unit and silently demotes `4000  KB` to bytes.
   - **Numeric grammar (decimal only)**: after trimming (canonical set above), the
     size *magnitude* token MUST match the ASCII-decimal grammar
     `^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$`. Any token that does not match —
@@ -129,11 +148,21 @@ The inbox parser is deliberately tolerant of hand-written / legacy bodies:
     **exceeds 100 TB** (10^14 bytes). Implementations MUST reject rather than
     trap, saturate, or wrap.
 - A **missing OR empty** MIME field falls back to extension inference (so
-  `… — , 4 KB` and `… —` both infer from the URL); extension inference **strips
-  any `?query`/`#fragment`** from the URL first, then lower-cases the last
-  path segment's final extension and looks it up in this **fixed, canonical
-  table** (identical across all ports — implementations MUST NOT use a
-  platform type database such as `UTType`, which varies by OS):
+  `… — , 4 KB` and `… —` both infer from the URL). Extension inference is a
+  **purely textual** operation — implementations MUST extract it manually, NOT via
+  a native path/URL type's "path extension" accessor (Swift `URL.pathExtension`
+  yields the empty string for a final segment like `.png`, which would wrongly fall
+  back to octet-stream). The steps are, in order:
+  1. strip any `?query` and `#fragment` (everything from the first `?` or `#`);
+  2. take the **last path segment** (everything after the final `/`);
+  3. lower-case everything **after that segment's final `.`** — this is the
+     extension. A segment that is itself a dotfile such as `.png` therefore yields
+     extension `png` (the text after the final `.`), inferring `image/png`. A
+     segment with no `.` yields the empty extension.
+
+  The resulting extension is looked up in this **fixed, canonical table**
+  (identical across all ports — implementations MUST NOT use a platform type
+  database such as `UTType`, which varies by OS):
 
   | extension      | MIME                       |
   | -------------- | -------------------------- |
