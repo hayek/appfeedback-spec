@@ -95,20 +95,60 @@ The inbox parser is deliberately tolerant of hand-written / legacy bodies:
 - **Line endings are normalized**: the parser converts `\r\n` and lone `\r` to
   `\n` before parsing, so CRLF bodies (e.g. issues authored in the GitHub web UI)
   parse identically to LF bodies.
-- **Per-line whitespace**: each line is trimmed of leading/trailing whitespace
-  AND line-terminator characters (space, tab, VT, FF, LF, CR, LS, PS) before
-  marker/field matching, so a stray control character can't hide a marker.
+- **Per-line whitespace (canonical trim set)**: every place the parser trims a
+  line or a field value, it trims **exactly** the ASCII whitespace set
+  `{ U+0009 (HT), U+000A (LF), U+000B (VT), U+000C (FF), U+000D (CR), U+0020
+  (SPACE) }` from both ends — **and nothing else**. This is a hard
+  cross-language rule: implementations MUST NOT defer to a language/runtime
+  default trim (Swift `.whitespacesAndNewlines`, Kotlin `String.trim()`,
+  JS `String.prototype.trim()`), because those each strip a different,
+  locale/Unicode-defined superset (NBSP U+00A0, NEL U+0085, BOM U+FEFF, the
+  Unicode space separators, …). Non-ASCII whitespace is therefore **preserved**
+  verbatim: a value ending in a no-break space (U+00A0) keeps that trailing
+  U+00A0 in all three ports. (This applies to the parse path only; the byte-exact
+  output formatter is unaffected.)
 - `**bold**` markers around labels are ignored.
 - A `**Contact Email:** foo@bar.com` inline form is accepted, as is the
   label-on-its-own-line-then-value form.
 - Standalone `---` lines are stripped from the description.
 - Attachment `<size>` is parsed approximately (`B`/`KB`/`MB`/`GB`, 1000-based)
-  into a **64-bit** integer; a missing size yields a null size. A size token that
-  is **non-finite** (`Infinity`/`NaN`) or whose value **exceeds 100 TB**
-  (10^14 bytes) yields a **null** size — implementations MUST reject rather than
-  trap, saturate, or wrap. A **missing OR empty** MIME field falls back to
-  extension inference (so `… — , 4 KB` and `… —` both infer from the URL);
-  extension inference **strips any `?query`/`#fragment`** from the URL first.
+  into a **64-bit** integer; a missing size yields a null size.
+  - **Numeric grammar (decimal only)**: after trimming (canonical set above), the
+    size *magnitude* token MUST match the ASCII-decimal grammar
+    `^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$`. Any token that does not match —
+    notably non-decimal radix or hex-float forms such as `0x10`, `0b1010`,
+    `0o17`, `0xAp2`, `0x1p4` — is treated as an **absent** size (the
+    attachment's `sizeBytes` becomes **null**), exactly like any other
+    unparseable size. Implementations MUST validate against this grammar before
+    handing the token to a native number parser, because the native parsers
+    disagree on non-decimal input (Swift `Double` accepts `0x10`/hex-float, JS
+    `Number` accepts `0x`/`0b`/`0o`, the JVM accepts hex-float) — so relying on
+    them would diverge.
+  - A token that is **non-finite** (`Infinity`/`NaN`) likewise yields **null**
+    (it fails the decimal grammar above), as does a value whose magnitude
+    **exceeds 100 TB** (10^14 bytes). Implementations MUST reject rather than
+    trap, saturate, or wrap.
+- A **missing OR empty** MIME field falls back to extension inference (so
+  `… — , 4 KB` and `… —` both infer from the URL); extension inference **strips
+  any `?query`/`#fragment`** from the URL first, then lower-cases the last
+  path segment's final extension and looks it up in this **fixed, canonical
+  table** (identical across all ports — implementations MUST NOT use a
+  platform type database such as `UTType`, which varies by OS):
+
+  | extension      | MIME                       |
+  | -------------- | -------------------------- |
+  | `png`          | `image/png`                |
+  | `jpg`, `jpeg`  | `image/jpeg`               |
+  | `gif`          | `image/gif`                |
+  | `heic`         | `image/heic`               |
+  | `webp`         | `image/webp`               |
+  | `pdf`          | `application/pdf`          |
+  | `log`, `txt`, `text` | `text/plain`         |
+  | `json`         | `application/json`         |
+  | `xml`          | `application/xml`          |
+  | `csv`          | `text/csv`                 |
+  | *(anything else / no extension)* | `application/octet-stream` |
+
 - Unknown future marker versions (e.g. `attachments-v2`) are ignored.
 
 ## Conformance
